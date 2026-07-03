@@ -69,7 +69,12 @@ async def get_flights():
     if now - _cache["time"] < CACHE_TTL and _cache["data"]:
         return {"cached": True, "count": len(_cache["data"]), "flights": _cache["data"]}
 
-    flights = await _fetch_flights()
+    try:
+        flights = await _fetch_flights()
+    except httpx.HTTPError:
+        #opensky nie odpowiada - ostatnie znane dane zamiast bledu
+        return {"cached": True, "stale": True, "count": len(_cache["data"]), "flights": _cache["data"]}
+
     _cache["time"] = now
     _cache["data"] = flights
     return {"cached": False, "count": len(flights), "flights": flights}

@@ -1,0 +1,152 @@
+/*globalne style + nadpisania wygladu leaflet - motyw night cockpit*/
+/*paleta: atramentowy granat + bursztyn*/
+
+:root {
+  --bg: #0b0f17;
+  --panel: rgba(13, 18, 28, 0.82);
+  --line: rgba(255, 255, 255, 0.08);
+  --accent: #ffb454;
+  --accent-soft: rgba(255, 180, 84, 0.14);
+  --text: #f2eee4;
+  --dim: #93a2b8;
+  --danger: #ff6b6b;
+  /*font kokpitowy Airbusa, do danych liczbowych Mono*/
+  --font-ui: 'B612', 'Segoe UI', system-ui, sans-serif;
+  --font-data: 'B612 Mono', ui-monospace, Menlo, Consolas, monospace;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+}
+
+/*tlo mapy pod kafelkami tez ciemne (widoczne przy ladowaniu)*/
+.leaflet-container {
+  background: var(--bg);
+  font-family: var(--font-ui);
+}
+
+/*ciagla interpolacja pozycji*/
+/*+szybkie powiekszenie przy hover*/
+.leaflet-marker-icon {
+  transition: transform 9.5s linear, scale 0.18s ease;
+}
+
+.leaflet-zoom-anim .leaflet-marker-icon {
+  transition: none;
+}
+
+.plane-icon {
+  background: none;
+  border: none;
+}
+
+.plane-icon:hover {
+  scale: 1.22;
+}
+
+.plane-icon svg {
+  display: block;
+  animation: plane-in 0.5s ease-out;
+}
+
+@keyframes plane-in {
+  from {
+    opacity: 0;
+    scale: 0.4;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+/*tooltip jako szklany panel*/
+.leaflet-tooltip.sqk-tip {
+  background: var(--panel);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--font-data);
+  font-size: 12px;
+  padding: 6px 10px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
+}
+
+.sqk-tip b {
+  display: block;
+  color: var(--accent);
+  letter-spacing: 0.08em;
+}
+
+.sqk-tip span {
+  color: var(--dim);
+  font-size: 11px;
+}
+
+.leaflet-tooltip-top.sqk-tip::before {
+  border-top-color: var(--line);
+}
+
+/*przyciski zoomu w ciemnym stylu*/
+.leaflet-bar {
+  border: 1px solid var(--line) !important;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.leaflet-bar a {
+  background: var(--panel);
+  color: var(--dim);
+  border-bottom: 1px solid var(--line);
+}
+
+.leaflet-bar a:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/*atrybucja mapy*/
+.leaflet-control-attribution {
+  background: rgba(11, 15, 23, 0.72) !important;
+  color: #5d6b80;
+  font-size: 10px;
+  font-family: var(--font-data);
+}
+
+.leaflet-control-attribution a {
+  color: #7e8ea6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leaflet-marker-icon {
+    transition: none;
+  }
+
+  .plane-icon svg {
+    animation: none;
+  }
+
+  .sweep,
+  .badge .dot {
+    animation: none;
+  }
+
+  .sweep {
+    display: none;
+  }
+}

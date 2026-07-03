@@ -16,3 +16,6 @@ dist/
 #ide
 .idea/
 .vscode/
+
+#narzedzia lokalne (konfiguracja podgladu)
+.claude/
