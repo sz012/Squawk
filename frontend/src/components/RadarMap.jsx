@@ -1,5 +1,5 @@
 //mapa
-import { MapContainer, TileLayer, Pane, ZoomControl } from 'react-leaflet'
+import { MapContainer, TileLayer, Pane, ZoomControl, useMapEvents } from 'react-leaflet'
 import PlaneMarker from './PlaneMarker.jsx'
 
 //ciemne kafelki CARTO - puste tlo + etykiety nazw
@@ -10,7 +10,13 @@ const TILE_ATTR =
 
 const CENTER = [52.1, 19.4] //srodek Polski
 
-export default function RadarMap({ flights }) {
+//klik w pusta mape odznacza wybrany samolot
+function DeselectOnClick({ onSelect }) {
+  useMapEvents({ click: () => onSelect(null) })
+  return null
+}
+
+export default function RadarMap({ flights, selectedId, onSelect }) {
   return (
     <MapContainer center={CENTER} zoom={6} minZoom={4} zoomControl={false} className="map">
       <TileLayer url={TILE_BASE} attribution={TILE_ATTR} subdomains="abcd" maxZoom={19} />
@@ -18,8 +24,14 @@ export default function RadarMap({ flights }) {
         <TileLayer url={TILE_LABELS} subdomains="abcd" maxZoom={19} />
       </Pane>
       <ZoomControl position="bottomright" />
+      <DeselectOnClick onSelect={onSelect} />
       {flights.map((f) => (
-        <PlaneMarker key={f.icao24} flight={f} />
+        <PlaneMarker
+          key={f.icao24}
+          flight={f}
+          selected={f.icao24 === selectedId}
+          onSelect={onSelect}
+        />
       ))}
     </MapContainer>
   )

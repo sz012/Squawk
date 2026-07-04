@@ -1,6 +1,7 @@
 //glowny komponent - sklada mape, gorny pasek statusu i stopke z danymi
 import { useEffect, useState } from 'react'
 import RadarMap from './components/RadarMap.jsx'
+import DetailsPanel from './components/DetailsPanel.jsx'
 import { fetchFlights } from './api.js'
 import './App.css'
 
@@ -18,6 +19,8 @@ export default function App() {
   const [flights, setFlights] = useState([])
   const [status, setStatus] = useState('loading')
   const [lastUpdate, setLastUpdate] = useState(null)
+  const [selectedId, setSelectedId] = useState(null) //icao24 kliknietego samolotu
+  const [hideGround, setHideGround] = useState(false) //filtr: ukryj maszyny na ziemi
 
   useEffect(() => {
     let alive = true
@@ -61,10 +64,13 @@ export default function App() {
   const airborne = flights.filter((f) => !f.on_ground).length
   const badge = BADGES[status]
   const showChip = status === 'loading' || (status === 'error' && flights.length === 0)
+  //lista po filtrze; wybrany lot znika z panelu razem ze znikanieciem z mapy
+  const shown = hideGround ? flights.filter((f) => !f.on_ground) : flights
+  const selected = shown.find((f) => f.icao24 === selectedId) ?? null
 
   return (
     <div className="app">
-      <RadarMap flights={flights} />
+      <RadarMap flights={shown} selectedId={selectedId} onSelect={setSelectedId} />
       {lastUpdate && <div className="ping" key={lastUpdate.getTime()} />}
       <div className="vignette" />
 
@@ -78,6 +84,10 @@ export default function App() {
         </div>
 
         <div className="stats">
+          {/*filtr celow naziemnych jak na skopie*/}
+          <button className={`toggle ${hideGround ? 'on' : ''}`} onClick={() => setHideGround((v) => !v)}>
+            {hideGround ? 'GND OFF' : 'GND ON'}
+          </button>
           <span className={`badge ${badge.cls}`}>
             <span className="dot" />
             {badge.label}
@@ -102,6 +112,8 @@ export default function App() {
           {status === 'error' ? 'no data link — retrying' : 'acquiring ads-b signal'}
         </div>
       )}
+
+      {selected && <DetailsPanel flight={selected} onClose={() => setSelectedId(null)} />}
 
       <footer className="databar">DATA · OpenSky Network · refresh {REFRESH_MS / 1000}s</footer>
     </div>
