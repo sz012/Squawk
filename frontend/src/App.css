@@ -350,7 +350,7 @@
   font-family: var(--font-data);
 }
 
-/*na waskim ekranie chowam podtytul, zeby pasek sie miescil; panel schodzi na dol*/
+/*na waskim ekranie chowam podtytul, zeby pasek sie miescil, panel schodzi na dol*/
 @media (max-width: 640px) {
   .brand-sub {
     display: none;

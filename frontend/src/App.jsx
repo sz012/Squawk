@@ -64,7 +64,6 @@ export default function App() {
   const airborne = flights.filter((f) => !f.on_ground).length
   const badge = BADGES[status]
   const showChip = status === 'loading' || (status === 'error' && flights.length === 0)
-  //lista po filtrze; wybrany lot znika z panelu razem ze znikanieciem z mapy
   const shown = hideGround ? flights.filter((f) => !f.on_ground) : flights
   const selected = shown.find((f) => f.icao24 === selectedId) ?? null
 
@@ -84,7 +83,6 @@ export default function App() {
         </div>
 
         <div className="stats">
-          {/*filtr celow naziemnych jak na skopie*/}
           <button className={`toggle ${hideGround ? 'on' : ''}`} onClick={() => setHideGround((v) => !v)}>
             {hideGround ? 'GND OFF' : 'GND ON'}
           </button>

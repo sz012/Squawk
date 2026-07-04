@@ -16,7 +16,7 @@ OPENSKY_URL = "https://opensky-network.org/api/states/all"
 #endpoint tokenow OAuth2 dla zarejestrowanych klientow API
 TOKEN_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
 
-#klucze z backend/.env; brak = dzialamy anonimowo (mniejszy limit)
+#jesli brak kluczy to mniejszy limit bo dzialanie anonimowo
 CLIENT_ID = os.getenv("OPENSKY_CLIENT_ID")
 CLIENT_SECRET = os.getenv("OPENSKY_CLIENT_SECRET")
 
@@ -42,7 +42,6 @@ app.add_middleware(
 )
 
 _cache = {"time": 0.0, "data": []}
-#token trzymamy do wygasniecia, zeby nie prosic o nowy przy kazdym zapytaniu
 _token = {"value": None, "expires": 0.0}
 
 

@@ -40,7 +40,6 @@ body {
 }
 
 /*plynne dojscie do nowej pozycji po odswiezeniu, potem samolot stoi*/
-/*celowo NIE caly cykl 10s: ciagly dryf gryzl sie z hoverem (hit-testing sledzi ruch)*/
 .leaflet-marker-icon {
   transition: transform 2.5s ease-out;
 }
@@ -54,7 +53,7 @@ body {
   border: none;
 }
 
-/*podswietlenie zamiast powiekszania - zmiana geometrii pod kursorem powodowala migotanie hovera*/
+/*podswietlenie zamiast powiekszania*/
 .plane-icon:hover {
   filter: brightness(1.4);
 }
@@ -103,7 +102,7 @@ body {
   border-top-color: var(--line);
 }
 
-/*przyciski zoomu w ciemnym stylu*/
+/*przyciski zoomu*/
 .leaflet-bar {
   border: 1px solid var(--line) !important;
   border-radius: 8px;
