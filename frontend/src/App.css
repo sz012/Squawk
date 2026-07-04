@@ -20,29 +20,30 @@
   background: radial-gradient(ellipse at center, transparent 58%, rgba(3, 6, 10, 0.55) 100%);
 }
 
-/*promien radaru*/
-.sweep {
+/*ping radaru - okrag rozchodzacy sie ze srodka przy kazdym odswiezeniu danych*/
+.ping {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 150vmax;
-  height: 150vmax;
-  margin: -75vmax 0 0 -75vmax;
+  width: 60vmax;
+  height: 60vmax;
+  margin: -30vmax 0 0 -30vmax;
   z-index: 450;
   pointer-events: none;
-  background: conic-gradient(
-    from 0deg,
-    rgba(255, 180, 84, 0.1) 0deg,
-    rgba(255, 180, 84, 0.03) 24deg,
-    transparent 70deg
-  );
-  animation: sweep-rot 12s linear infinite;
-  will-change: transform;
+  border: 1.5px solid rgba(255, 180, 84, 0.4);
+  border-radius: 50%;
+  opacity: 0;
+  animation: ping-out 1.4s ease-out;
 }
 
-@keyframes sweep-rot {
+@keyframes ping-out {
+  from {
+    scale: 0.02;
+    opacity: 0.8;
+  }
   to {
-    transform: rotate(360deg);
+    scale: 1;
+    opacity: 0;
   }
 }
 

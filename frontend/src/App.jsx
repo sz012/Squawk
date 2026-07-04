@@ -65,7 +65,7 @@ export default function App() {
   return (
     <div className="app">
       <RadarMap flights={flights} />
-      <div className="sweep" />
+      {lastUpdate && <div className="ping" key={lastUpdate.getTime()} />}
       <div className="vignette" />
 
       <header className="topbar">
