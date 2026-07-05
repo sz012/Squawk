@@ -58,6 +58,19 @@ body {
   filter: brightness(1.4);
 }
 
+/*podczas animacji zoomu zdejmujemy najdrozsze efekty - drop-shadow na ~150 ikonach*/
+/*i backdrop-blur nad zmieniajaca sie mapa scinaly klatki; important nadpisuje styl inline*/
+body.zooming .plane-icon svg {
+  filter: none !important;
+}
+
+body.zooming .topbar,
+body.zooming .panel,
+body.zooming .databar,
+body.zooming .init-chip {
+  backdrop-filter: none;
+}
+
 .plane-icon svg {
   display: block;
   animation: plane-in 0.5s ease-out;

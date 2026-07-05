@@ -36,7 +36,7 @@ app = FastAPI(title="Squawk API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://localhost:5174"],  #5174 = port zapasowy vite
     allow_methods=["GET"],
     allow_headers=["*"],
 )
