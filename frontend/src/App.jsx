@@ -1,5 +1,5 @@
 //glowny komponent - sklada mape, gorny pasek statusu i stopke z danymi
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import RadarMap from './components/RadarMap.jsx'
 import DetailsPanel from './components/DetailsPanel.jsx'
 import { fetchFlights } from './api.js'
@@ -21,6 +21,9 @@ export default function App() {
   const [lastUpdate, setLastUpdate] = useState(null)
   const [selectedId, setSelectedId] = useState(null) //icao24 kliknietego samolotu
   const [hideGround, setHideGround] = useState(false) //filtr: ukryj maszyny na ziemi
+  //historia pozycji per samolot (icao24 -> lista [lat, lon]) do rysowania sladu trasy
+  //ref a nie state - aktualizacja historii nie ma sama wymuszac renderu
+  const trailsRef = useRef(new Map())
 
   useEffect(() => {
     let alive = true
@@ -29,6 +32,27 @@ export default function App() {
       try {
         const data = await fetchFlights()
         if (!alive) return
+
+        //dopisujemy nowe pozycje do sladow; duplikaty (cache) pomijamy
+        const trails = trailsRef.current
+        const seen = new Set()
+        data.flights.forEach((f) => {
+          seen.add(f.icao24)
+          const entry = trails.get(f.icao24) ?? { pts: [], miss: 0 }
+          entry.miss = 0
+          const last = entry.pts[entry.pts.length - 1]
+          if (!last || last[0] !== f.lat || last[1] !== f.lon) {
+            entry.pts.push([f.lat, f.lon])
+            if (entry.pts.length > 40) entry.pts.shift() //ok. 6 minut historii przy odswiezaniu co 10s
+          }
+          trails.set(f.icao24, entry)
+        })
+        //dane ADS-B miewaja dziury (samolot wypada na jedna migawke i wraca),
+        //wiec slad kasujemy dopiero po dluzszej nieobecnosci
+        for (const [key, entry] of trails) {
+          if (!seen.has(key) && ++entry.miss >= 6) trails.delete(key)
+        }
+
         setFlights(data.flights)
         setStatus(data.stale ? 'stale' : 'live')
         setLastUpdate(new Date())
@@ -66,10 +90,12 @@ export default function App() {
   const showChip = status === 'loading' || (status === 'error' && flights.length === 0)
   const shown = hideGround ? flights.filter((f) => !f.on_ground) : flights
   const selected = shown.find((f) => f.icao24 === selectedId) ?? null
+  //kopia a nie oryginal - react-leaflet porownuje referencje, mutowana tablica nie odswiezylaby linii
+  const trail = selected ? [...(trailsRef.current.get(selected.icao24)?.pts ?? [])] : []
 
   return (
     <div className="app">
-      <RadarMap flights={shown} selectedId={selectedId} onSelect={setSelectedId} />
+      <RadarMap flights={shown} selectedId={selectedId} onSelect={setSelectedId} trail={trail} />
       {lastUpdate && <div className="ping" key={lastUpdate.getTime()} />}
       <div className="vignette" />
 

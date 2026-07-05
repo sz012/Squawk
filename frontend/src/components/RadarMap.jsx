@@ -1,5 +1,5 @@
 //mapa
-import { MapContainer, TileLayer, Pane, ZoomControl, useMapEvents } from 'react-leaflet'
+import { MapContainer, TileLayer, Pane, ZoomControl, Polyline, useMapEvents } from 'react-leaflet'
 import PlaneMarker from './PlaneMarker.jsx'
 
 //ciemne kafelki CARTO - puste tlo + etykiety nazw
@@ -16,7 +16,16 @@ function DeselectOnClick({ onSelect }) {
   return null
 }
 
-export default function RadarMap({ flights, selectedId, onSelect }) {
+//na czas animacji zoomu zdejmujemy najdrozsze efekty (filtry, blury) - klasa na body
+function ZoomPerfGuard() {
+  useMapEvents({
+    zoomstart: () => document.body.classList.add('zooming'),
+    zoomend: () => document.body.classList.remove('zooming'),
+  })
+  return null
+}
+
+export default function RadarMap({ flights, selectedId, onSelect, trail }) {
   return (
     <MapContainer center={CENTER} zoom={6} minZoom={4} zoomControl={false} className="map">
       <TileLayer url={TILE_BASE} attribution={TILE_ATTR} subdomains="abcd" maxZoom={19} />
@@ -25,6 +34,11 @@ export default function RadarMap({ flights, selectedId, onSelect }) {
       </Pane>
       <ZoomControl position="bottomright" />
       <DeselectOnClick onSelect={onSelect} />
+      <ZoomPerfGuard />
+      {/*slad trasy wybranego samolotu - historia zebrana z kolejnych odswiezen*/}
+      {trail.length > 1 && (
+        <Polyline positions={trail} pathOptions={{ color: '#ffb454', weight: 2, opacity: 0.45 }} interactive={false} />
+      )}
       {flights.map((f) => (
         <PlaneMarker
           key={f.icao24}
