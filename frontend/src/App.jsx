@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import RadarMap from './components/RadarMap.jsx'
 import DetailsPanel from './components/DetailsPanel.jsx'
-import { fetchFlights } from './api.js'
+import { fetchFlights, fetchTrack } from './api.js'
 import './App.css'
 
 const REFRESH_MS = 10000 //co ile pytam backend o swieze pozycje
@@ -20,10 +20,10 @@ export default function App() {
   const [status, setStatus] = useState('loading')
   const [lastUpdate, setLastUpdate] = useState(null)
   const [selectedId, setSelectedId] = useState(null) //icao24 kliknietego samolotu
-  const [hideGround, setHideGround] = useState(false) //filtr: ukryj maszyny na ziemi
-  //historia pozycji per samolot (icao24 -> lista [lat, lon]) do rysowania sladu trasy
-  //ref a nie state - aktualizacja historii nie ma sama wymuszac renderu
+  const [hideGround, setHideGround] = useState(false) //filtr - ukryj maszyny na ziemi
   const trailsRef = useRef(new Map())
+  //pelna sciezka wybranego lotu od startu (z API), null - wlasna historia
+  const [trackPath, setTrackPath] = useState(null)
 
   useEffect(() => {
     let alive = true
@@ -33,7 +33,6 @@ export default function App() {
         const data = await fetchFlights()
         if (!alive) return
 
-        //dopisujemy nowe pozycje do sladow; duplikaty (cache) pomijamy
         const trails = trailsRef.current
         const seen = new Set()
         data.flights.forEach((f) => {
@@ -47,8 +46,6 @@ export default function App() {
           }
           trails.set(f.icao24, entry)
         })
-        //dane ADS-B miewaja dziury (samolot wypada na jedna migawke i wraca),
-        //wiec slad kasujemy dopiero po dluzszej nieobecnosci
         for (const [key, entry] of trails) {
           if (!seen.has(key) && ++entry.miss >= 6) trails.delete(key)
         }
@@ -85,13 +82,37 @@ export default function App() {
     document.title = `Squawk · ${flights.length} tracked`
   }, [flights.length])
 
+  //po wyborze samolotu dociagam pelna trase od startu lotu
+  useEffect(() => {
+    setTrackPath(null)
+    if (!selectedId) return
+    let alive = true
+    fetchTrack(selectedId)
+      .then((d) => {
+        if (alive && d.path.length > 1) setTrackPath(d.path)
+      })
+      .catch(() => {}) //brak trasy z API - zostaje przy wlasnej historii
+    return () => {
+      alive = false
+    }
+  }, [selectedId])
+
   const airborne = flights.filter((f) => !f.on_ground).length
   const badge = BADGES[status]
   const showChip = status === 'loading' || (status === 'error' && flights.length === 0)
   const shown = hideGround ? flights.filter((f) => !f.on_ground) : flights
   const selected = shown.find((f) => f.icao24 === selectedId) ?? null
-  //kopia a nie oryginal - react-leaflet porownuje referencje, mutowana tablica nie odswiezylaby linii
-  const trail = selected ? [...(trailsRef.current.get(selected.icao24)?.pts ?? [])] : []
+  //sciezka z API ma pierwszenstwo, fallback - wlasna historia z odswiezen
+  const trail = trackPath ?? (selected ? [...(trailsRef.current.get(selected.icao24)?.pts ?? [])] : [])
+
+  //sciezka z API to stan na moment kliku - kolejne odswiezenia dopisuja biezaca pozycje
+  useEffect(() => {
+    if (!trackPath || !selected) return
+    const last = trackPath[trackPath.length - 1]
+    if (last[0] !== selected.lat || last[1] !== selected.lon) {
+      setTrackPath([...trackPath, [selected.lat, selected.lon]])
+    }
+  }, [trackPath, selected])
 
   return (
     <div className="app">

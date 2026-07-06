@@ -7,3 +7,15 @@ export async function fetchFlights() {
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }
+
+export async function fetchTrack(icao24) {
+  const res = await fetch(`${API_BASE}/track/${icao24}`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+export async function fetchFlightInfo(icao24, callsign) {
+  const res = await fetch(`${API_BASE}/flightinfo/${icao24}/${callsign}`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}

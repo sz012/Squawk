@@ -16,11 +16,19 @@ function DeselectOnClick({ onSelect }) {
   return null
 }
 
-//na czas animacji zoomu zdejmujemy najdrozsze efekty (filtry, blury) - klasa na body
+let zoomTimer
+
+//na czas animacji zoomu zdejmuje najdrozsze efekty (filtry, blury, tranzycje)
 function ZoomPerfGuard() {
   useMapEvents({
-    zoomstart: () => document.body.classList.add('zooming'),
-    zoomend: () => document.body.classList.remove('zooming'),
+    zoomstart: () => {
+      clearTimeout(zoomTimer)
+      document.body.classList.add('zooming')
+    },
+    zoomend: () => {
+      clearTimeout(zoomTimer)
+      zoomTimer = setTimeout(() => document.body.classList.remove('zooming'), 150)
+    },
   })
   return null
 }
