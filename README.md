@@ -2,14 +2,15 @@
 
 Live ADS-B mini-radar showing air traffic over Poland. A FastAPI backend fetches and caches aircraft positions from the OpenSky Network, a React + Leaflet frontend draws them on a dark map. "Squawk" is the four-digit transponder code that air traffic control assigns to every flight.
 
-(screenshot soon)
+![Squawk radar](docs/radar.png)
 
 ## Features
 
 - live aircraft positions over Poland, refreshed every 10 s
 - icons rotated to the aircraft's track, with a velocity vector (longer = faster)
-- smooth movement between updates
-- tooltip with callsign, altitude and speed on hover
+- click a plane: airline, route (from -> to), aircraft type, squawk code, altitude, speed, vertical rate
+- full flight path drawn from takeoff, extended live while the plane flies
+- ground targets filter, hover tooltip, smooth movement between updates
 - link status: LIVE / STALE (last known data when OpenSky throttles) / NO LINK
 - UTC clock and a radar ping on each data refresh
 
@@ -38,6 +39,7 @@ Anonymous OpenSky access has a small daily quota per IP. When it runs out, the a
 
 ## Data & credits
 
-- flight data: [OpenSky Network](https://opensky-network.org/) (non-commercial use)
+- flight data and tracks: [OpenSky Network](https://opensky-network.org/) (non-commercial use)
+- routes and aircraft info: [adsbdb](https://www.adsbdb.com/)
 - map tiles: © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, © [CARTO](https://carto.com/attributions)
 - font: [B612](https://b612-font.com/) (SIL Open Font License), designed for Airbus cockpit displays
