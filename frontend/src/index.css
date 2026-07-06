@@ -71,6 +71,14 @@ body.zooming .init-chip {
   backdrop-filter: none;
 }
 
+body.zooming .leaflet-marker-icon {
+  transition: none;
+}
+
+body.zooming .leaflet-labels-pane {
+  display: none;
+}
+
 .plane-icon svg {
   display: block;
   animation: plane-in 0.5s ease-out;

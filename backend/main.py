@@ -1,3 +1,4 @@
+import asyncio
 import os
 import time
 
@@ -13,6 +14,10 @@ load_dotenv()  #wczytuje backend/.env jesli istnieje
 
 #surowe stany sledzonych samolotow
 OPENSKY_URL = "https://opensky-network.org/api/states/all"
+#pelna sciezka trwajacego lotu
+TRACK_URL = "https://opensky-network.org/api/tracks/all"
+#spolecznosciowa baza tras i samolotow (bez klucza)
+ADSBDB_URL = "https://api.adsbdb.com/v0"
 #endpoint tokenow OAuth2 dla zarejestrowanych klientow API
 TOKEN_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
 
@@ -36,13 +41,15 @@ app = FastAPI(title="Squawk API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5174"],  #5174 = port zapasowy vite
+    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://localhost:5175"],  #porty zapasowe vite
     allow_methods=["GET"],
     allow_headers=["*"],
 )
 
 _cache = {"time": 0.0, "data": []}
 _token = {"value": None, "expires": 0.0}
+_track_cache = {}  #icao24 -> (czas, wynik)
+_info_cache = {}  #icao24:callsign -> (czas, wynik)
 
 
 async def _get_token(client: httpx.AsyncClient):
@@ -116,3 +123,75 @@ async def get_flights():
     _cache["time"] = now
     _cache["data"] = flights
     return {"cached": False, "count": len(flights), "flights": flights}
+
+
+@app.get("/track/{icao24}")
+async def get_track(icao24: str):
+    #pelna sciezka lotu od startu wg OpenSky, cache 60s
+    now = time.time()
+    cached = _track_cache.get(icao24)
+    if cached and now - cached[0] < 60:
+        return cached[1]
+
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            token = await _get_token(client)
+            headers = {"Authorization": f"Bearer {token}"} if token else {}
+            response = await client.get(TRACK_URL, params={"icao24": icao24, "time": 0}, headers=headers)
+            response.raise_for_status()
+            payload = response.json()
+    except httpx.HTTPError:
+        #brak sciezki to nie blad krytyczny - frontend uzyje wlasnej historii
+        return {"path": []}
+
+    #punkt sciezki - [czas, lat, lon, wysokosc, kurs, on_ground]
+    path = [[p[1], p[2]] for p in (payload.get("path") or []) if p[1] is not None and p[2] is not None]
+    result = {"path": path}
+    if len(_track_cache) > 300:
+        _track_cache.clear()
+    _track_cache[icao24] = (now, result)
+    return result
+
+
+@app.get("/flightinfo/{icao24}/{callsign}")
+async def get_flight_info(icao24: str, callsign: str):
+    #wzbogacenie - linia lotnicza, trasa skad-dokad, typ maszyny (adsbdb.com)
+    now = time.time()
+    key = f"{icao24}:{callsign}"
+    cached = _info_cache.get(key)
+    if cached and now - cached[0] < 6 * 3600:
+        return cached[1]
+
+    route = None
+    aircraft = None
+    async with httpx.AsyncClient(timeout=10) as client:
+        r_route, r_ac = await asyncio.gather(
+            client.get(f"{ADSBDB_URL}/callsign/{callsign}"),
+            client.get(f"{ADSBDB_URL}/aircraft/{icao24}"),
+            return_exceptions=True,
+        )
+
+    if not isinstance(r_route, BaseException) and r_route.status_code == 200:
+        data = r_route.json().get("response")
+        if isinstance(data, dict) and data.get("flightroute"):
+            fr = data["flightroute"]
+            airline = fr.get("airline") or {}
+            origin = fr.get("origin") or {}
+            dest = fr.get("destination") or {}
+            route = {
+                "airline": {"name": airline.get("name"), "icao": airline.get("icao")},
+                "origin": {"iata": origin.get("iata_code"), "city": origin.get("municipality")},
+                "destination": {"iata": dest.get("iata_code"), "city": dest.get("municipality")},
+            }
+
+    if not isinstance(r_ac, BaseException) and r_ac.status_code == 200:
+        data = r_ac.json().get("response")
+        if isinstance(data, dict) and data.get("aircraft"):
+            ac = data["aircraft"]
+            aircraft = {"type": ac.get("icao_type") or ac.get("type"), "registration": ac.get("registration")}
+
+    result = {"route": route, "aircraft": aircraft}
+    if len(_info_cache) > 500:
+        _info_cache.clear()
+    _info_cache[key] = (now, result)
+    return result

@@ -299,16 +299,76 @@
   font-family: var(--font-data);
 }
 
-.panel-squawk {
-  display: block;
-  margin-top: 2px;
-  font-size: 10px;
-  letter-spacing: 0.16em;
-  color: var(--dim);
-  font-family: var(--font-data);
+/*monogram linii lotniczej - znaczek z kodem ICAO w typie kokpitu*/
+.panel-ident {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.panel-squawk.alert {
+.panel-mono {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 180, 84, 0.4);
+  border-radius: 9px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--font-data);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+
+.panel-airline {
+  display: block;
+  margin-top: 1px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--dim);
+}
+
+/*blok trasy skad-dokad*/
+.panel-route {
+  margin: 10px 0 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.route-codes {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-data);
+  font-size: 16px;
+  color: var(--text);
+}
+
+.route-arrow {
+  color: var(--accent);
+  font-size: 13px;
+}
+
+.route-cities {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 2px;
+  font-size: 10px;
+  color: var(--dim);
+}
+
+.route-cities span {
+  max-width: 48%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.panel-row dd.alert {
   color: var(--danger);
 }
 
