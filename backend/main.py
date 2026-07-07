@@ -62,6 +62,10 @@ _track_cache = {}  #icao24 -> (czas, wynik)
 _info_cache = {}  #icao24:callsign -> (czas, wynik)
 
 
+def _http_client() -> httpx.AsyncClient:
+    transport = httpx.AsyncHTTPTransport(retries=2, local_address="0.0.0.0")
+    return httpx.AsyncClient(timeout=httpx.Timeout(15, connect=10), transport=transport)
+
 async def _get_token(client: httpx.AsyncClient):
     #zwraca wazny token albo None gdy brak kluczy
     if not CLIENT_ID or not CLIENT_SECRET:
@@ -103,7 +107,7 @@ def _parse_state(state: list) -> dict:
 
 async def _fetch_flights() -> list:
     #pobiera swieze dane z OpenSky
-    async with httpx.AsyncClient(timeout=15) as client:
+    async with _http_client() as client:
         token = await _get_token(client)
         headers = {"Authorization": f"Bearer {token}"} if token else {}
         response = await client.get(OPENSKY_URL, params=DEFAULT_BBOX, headers=headers)
@@ -144,7 +148,7 @@ async def get_track(icao24: str):
         return cached[1]
 
     try:
-        async with httpx.AsyncClient(timeout=15) as client:
+        async with _http_client() as client:
             token = await _get_token(client)
             headers = {"Authorization": f"Bearer {token}"} if token else {}
             response = await client.get(TRACK_URL, params={"icao24": icao24, "time": 0}, headers=headers)
@@ -175,7 +179,7 @@ async def get_flight_info(icao24: str, callsign: str):
 
     route = None
     aircraft = None
-    async with httpx.AsyncClient(timeout=10) as client:
+    async with _http_client() as client:
         r_route, r_ac = await asyncio.gather(
             client.get(f"{ADSBDB_URL}/callsign/{callsign}"),
             client.get(f"{ADSBDB_URL}/aircraft/{icao24}"),
