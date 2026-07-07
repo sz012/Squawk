@@ -4,31 +4,21 @@ import os
 import time
 
 import httpx
-from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 #./.venv/bin/uvicorn main:app --reload --port 8000
 #http://localhost:8000/flights / http://localhost:8000/docs
 
-load_dotenv()  #wczytuje backend/.env jesli istnieje
-
 #logi trafiaja do wyjscia uvicorna (widoczne tez w panelu hostingu)
 logger = logging.getLogger("uvicorn.error")
 
 #pozycje na zywo - otwarte api adsb.lol (okrag: srodek PL, promien 250 mil morskich)
-#OpenSky blokuje IP duzych chmur, dlatego stany nie ida z OpenSky
 STATES_URL = "https://api.adsb.lol/v2/lat/52.1/lon/19.4/dist/250"
-#pelna sciezka trwajacego lotu
-TRACK_URL = "https://opensky-network.org/api/tracks/all"
+#pelna sciezka lotu - endpoint tar1090 na infrastrukturze adsb.lol
+TRACE_URL = "https://globe.adsb.lol/data/traces/{suffix}/trace_full_{icao24}.json"
 #spolecznosciowa baza tras i samolotow (bez klucza)
 ADSBDB_URL = "https://api.adsbdb.com/v0"
-#endpoint tokenow OAuth2 dla zarejestrowanych klientow API
-TOKEN_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
-
-#klucze OpenSky - opcjonalne, potrzebne tylko do pelnej sciezki lotu (/track)
-CLIENT_ID = os.getenv("OPENSKY_CLIENT_ID")
-CLIENT_SECRET = os.getenv("OPENSKY_CLIENT_SECRET")
 
 #ile sekund przed odpytaniem API ponownie
 CACHE_TTL = 6
@@ -54,33 +44,17 @@ app.add_middleware(
 )
 
 _cache = {"time": 0.0, "data": []}
-_token = {"value": None, "expires": 0.0}
 _track_cache = {}  #icao24 -> (czas, wynik)
 _info_cache = {}  #icao24:callsign -> (czas, wynik)
 
 
 def _http_client() -> httpx.AsyncClient:
     transport = httpx.AsyncHTTPTransport(retries=2, local_address="0.0.0.0")
-    return httpx.AsyncClient(timeout=httpx.Timeout(15, connect=10), transport=transport)
-
-async def _get_token(client: httpx.AsyncClient):
-    #zwraca wazny token albo None gdy brak kluczy
-    if not CLIENT_ID or not CLIENT_SECRET:
-        return None
-    now = time.time()
-    if _token["value"] and now < _token["expires"] - 60:
-        return _token["value"]
-
-    response = await client.post(TOKEN_URL, data={
-        "grant_type": "client_credentials",
-        "client_id": CLIENT_ID,
-        "client_secret": CLIENT_SECRET,
-    })
-    response.raise_for_status()
-    payload = response.json()
-    _token["value"] = payload["access_token"]
-    _token["expires"] = now + payload.get("expires_in", 1800)
-    return _token["value"]
+    return httpx.AsyncClient(
+        timeout=httpx.Timeout(15, connect=10),
+        transport=transport,
+        follow_redirects=True,
+    )
 
 
 def _parse_aircraft(ac: dict) -> dict:
@@ -141,16 +115,13 @@ async def get_flights():
 async def debug_connectivity():
     #TYMCZASOWA diagnostyka polaczen wychodzacych z serwera - do usuniecia po deployu
     targets = [
-        ("auth_opensky", TOKEN_URL),
-        ("api_opensky", "https://opensky-network.org/api/states/all?lamin=52&lomin=19&lamax=52.1&lomax=19.1"),
-        ("adsbdb", f"{ADSBDB_URL}/callsign/LOT1"),
-        ("adsb_lol", "https://api.adsb.lol/v2/lat/52.1/lon/19.4/dist/50"),
+        ("adsb_lol_trace", TRACE_URL.format(suffix="c4", icao24="a8f5c4")),
         ("google", "https://www.google.com"),
     ]
     results = {}
     for name, url in targets:
         try:
-            async with httpx.AsyncClient(timeout=httpx.Timeout(8, connect=5)) as client:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(8, connect=5), follow_redirects=True) as client:
                 r = await client.get(url)
             results[name] = f"ok {r.status_code}"
         except Exception as exc:
@@ -160,26 +131,26 @@ async def debug_connectivity():
 
 @app.get("/track/{icao24}")
 async def get_track(icao24: str):
-    #pelna sciezka lotu od startu wg OpenSky, cache 60s
+    #pelna sciezka lotu od startu, cache 60s
     now = time.time()
     cached = _track_cache.get(icao24)
     if cached and now - cached[0] < 60:
         return cached[1]
 
+    url = TRACE_URL.format(suffix=icao24[-2:], icao24=icao24)
     try:
         async with _http_client() as client:
-            token = await _get_token(client)
-            headers = {"Authorization": f"Bearer {token}"} if token else {}
-            response = await client.get(TRACK_URL, params={"icao24": icao24, "time": 0}, headers=headers)
+            response = await client.get(url)
             response.raise_for_status()
             payload = response.json()
     except httpx.HTTPError as exc:
         #brak sciezki to nie blad krytyczny - frontend uzyje wlasnej historii
-        logger.warning("OpenSky tracks niedostepne dla %s: %r", icao24, exc)
+        logger.warning("trace niedostepny dla %s: %r", icao24, exc)
         return {"path": []}
 
-    #punkt sciezki - [czas, lat, lon, wysokosc, kurs, on_ground]
-    path = [[p[1], p[2]] for p in (payload.get("path") or []) if p[1] is not None and p[2] is not None]
+    #punkt trace - [offset_s, lat, lon, wysokosc, predkosc, ...]
+    path = [[p[1], p[2]] for p in (payload.get("trace") or []) if p[1] is not None and p[2] is not None]
+    path = path[-2000:]
     result = {"path": path}
     if len(_track_cache) > 300:
         _track_cache.clear()
