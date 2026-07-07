@@ -139,6 +139,26 @@ async def get_flights():
     return {"cached": False, "count": len(flights), "flights": flights}
 
 
+@app.get("/debug")
+async def debug_connectivity():
+    #TYMCZASOWA diagnostyka polaczen wychodzacych z serwera - do usuniecia po deployu
+    targets = [
+        ("auth_opensky", TOKEN_URL),
+        ("api_opensky", "https://opensky-network.org/api/states/all?lamin=52&lomin=19&lamax=52.1&lomax=19.1"),
+        ("adsbdb", f"{ADSBDB_URL}/callsign/LOT1"),
+        ("google", "https://www.google.com"),
+    ]
+    results = {}
+    for name, url in targets:
+        try:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(8, connect=5)) as client:
+                r = await client.get(url)
+            results[name] = f"ok {r.status_code}"
+        except Exception as exc:
+            results[name] = f"BLAD {exc!r}"
+    return results
+
+
 @app.get("/track/{icao24}")
 async def get_track(icao24: str):
     #pelna sciezka lotu od startu wg OpenSky, cache 60s
