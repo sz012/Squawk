@@ -160,7 +160,7 @@ export default function App() {
 
       {selected && <DetailsPanel flight={selected} onClose={() => setSelectedId(null)} />}
 
-      <footer className="databar">DATA · OpenSky Network · refresh {REFRESH_MS / 1000}s</footer>
+      <footer className="databar">DATA · adsb.lol · refresh {REFRESH_MS / 1000}s</footer>
     </div>
   )
 }

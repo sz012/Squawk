@@ -1,6 +1,6 @@
 # Squawk
 
-Live ADS-B mini-radar showing air traffic over Poland. A FastAPI backend fetches and caches aircraft positions from the OpenSky Network, a React + Leaflet frontend draws them on a dark map. "Squawk" is the four-digit transponder code that air traffic control assigns to every flight.
+Live ADS-B mini-radar showing air traffic over Poland. A FastAPI backend fetches and caches aircraft positions from adsb.lol, a React + Leaflet frontend draws them on a dark map. "Squawk" is the four-digit transponder code that air traffic control assigns to every flight.
 
 ![Squawk radar](docs/radar.png)
 
@@ -35,11 +35,12 @@ npm install
 npm run dev
 ```
 
-Anonymous OpenSky access has a small daily quota per IP. When it runs out, the app keeps showing the last known positions with a STALE badge - that is expected, the quota resets around midnight UTC.
+Positions need no API key. Optionally, put OpenSky API credentials in `backend/.env` (see `.env.example`) - they enable the full flight path from takeoff, without them the app draws the path collected while it runs. If the data source is unreachable, the app keeps showing last known positions with a STALE badge.
 
 ## Data & credits
 
-- flight data and tracks: [OpenSky Network](https://opensky-network.org/) (non-commercial use)
+- live positions: [adsb.lol](https://adsb.lol/) (open community API)
+- flight tracks: [OpenSky Network](https://opensky-network.org/) (non-commercial use)
 - routes and aircraft info: [adsbdb](https://www.adsbdb.com/)
 - map tiles: © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, © [CARTO](https://carto.com/attributions)
 - font: [B612](https://b612-font.com/) (SIL Open Font License), designed for Airbus cockpit displays

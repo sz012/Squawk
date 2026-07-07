@@ -16,8 +16,9 @@ load_dotenv()  #wczytuje backend/.env jesli istnieje
 #logi trafiaja do wyjscia uvicorna (widoczne tez w panelu hostingu)
 logger = logging.getLogger("uvicorn.error")
 
-#surowe stany sledzonych samolotow
-OPENSKY_URL = "https://opensky-network.org/api/states/all"
+#pozycje na zywo - otwarte api adsb.lol (okrag: srodek PL, promien 250 mil morskich)
+#OpenSky blokuje IP duzych chmur, dlatego stany nie ida z OpenSky
+STATES_URL = "https://api.adsb.lol/v2/lat/52.1/lon/19.4/dist/250"
 #pelna sciezka trwajacego lotu
 TRACK_URL = "https://opensky-network.org/api/tracks/all"
 #spolecznosciowa baza tras i samolotow (bez klucza)
@@ -25,21 +26,17 @@ ADSBDB_URL = "https://api.adsbdb.com/v0"
 #endpoint tokenow OAuth2 dla zarejestrowanych klientow API
 TOKEN_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
 
-#jesli brak kluczy to mniejszy limit bo dzialanie anonimowo
+#klucze OpenSky - opcjonalne, potrzebne tylko do pelnej sciezki lotu (/track)
 CLIENT_ID = os.getenv("OPENSKY_CLIENT_ID")
 CLIENT_SECRET = os.getenv("OPENSKY_CLIENT_SECRET")
 
-#region Polska
-DEFAULT_BBOX = {
-    "lamin": 49.0,  #min poludnie
-    "lomin": 14.1,  #min zachod
-    "lamax": 54.9,  #max polnoc
-    "lomax": 24.2,  #max wschod
-}
-
 #ile sekund przed odpytaniem API ponownie
-#OpenSky ma limity dla anonimowych
 CACHE_TTL = 6
+
+#przeliczniki jednostek lotniczych na metryczne
+FT_TO_M = 0.3048
+KT_TO_MS = 0.514444
+FTMIN_TO_MS = 0.00508  #stopy/min -> m/s
 
 app = FastAPI(title="Squawk API")
 
@@ -86,38 +83,39 @@ async def _get_token(client: httpx.AsyncClient):
     return _token["value"]
 
 
-def _parse_state(state: list) -> dict:
-    #zamiana na slownik listy wartosci z OpenSky
-    callsign = state[1]
+def _parse_aircraft(ac: dict) -> dict:
+    alt = ac.get("alt_baro")
+    on_ground = alt == "ground"
+    callsign = (ac.get("flight") or "").strip()
     return {
-        "icao24": state[0],  #unikalny id transpondera
-        "callsign": callsign.strip() if callsign else None,  #znak wywolawczy lotu
-        "country": state[2],  #kraj rejestracji
-        "last_contact": state[4],  #unix ts ostatniego sygnalu
-        "lon": state[5],  #dlugosc geograficzna
-        "lat": state[6],  #szerokosc geograficzna
-        "altitude": state[7],  #wysokosc barometryczna w metrach
-        "on_ground": state[8],  #czy samolot jest na ziemi
-        "velocity": state[9],  #predkosc nad ziemia w m/s
-        "track": state[10],  #kurs w stopniach 0=polnoc
-        "vertical_rate": state[11],  #m/s, ujemne = opada
-        "squawk": state[14],  #kod transpondera
+        "icao24": ac.get("hex"),  #unikalny id transpondera
+        "callsign": callsign or None,  #znak wywolawczy lotu
+        "last_contact": int(time.time() - ac.get("seen", 0)),  #unix ts ostatniego sygnalu
+        "lon": ac.get("lon"),
+        "lat": ac.get("lat"),
+        "altitude": None if on_ground or alt is None else round(alt * FT_TO_M, 1),
+        "on_ground": on_ground,
+        "velocity": round(ac["gs"] * KT_TO_MS, 1) if ac.get("gs") is not None else None,  #m/s
+        "track": ac.get("track"),  #kurs w stopniach 0=polnoc
+        "vertical_rate": round(ac["baro_rate"] * FTMIN_TO_MS, 1) if ac.get("baro_rate") is not None else None,
+        "squawk": ac.get("squawk"),  #kod transpondera
     }
 
 
 async def _fetch_flights() -> list:
-    #pobiera swieze dane z OpenSky
+    #pobiera swieze pozycje z adsb.lol
     async with _http_client() as client:
-        token = await _get_token(client)
-        headers = {"Authorization": f"Bearer {token}"} if token else {}
-        response = await client.get(OPENSKY_URL, params=DEFAULT_BBOX, headers=headers)
+        response = await client.get(STATES_URL)
         response.raise_for_status()
         payload = response.json()
 
-    states = payload.get("states") or []
-
-    #odsiewam samoloty bez pozycji
-    flights = [_parse_state(s) for s in states if s[5] is not None and s[6] is not None]
+    aircraft = payload.get("ac") or []
+    #odsiewam wpisy bez pozycji
+    flights = [
+        _parse_aircraft(a)
+        for a in aircraft
+        if a.get("lat") is not None and a.get("lon") is not None and not str(a.get("hex", "")).startswith("~")
+    ]
     return flights
 
 
@@ -146,6 +144,7 @@ async def debug_connectivity():
         ("auth_opensky", TOKEN_URL),
         ("api_opensky", "https://opensky-network.org/api/states/all?lamin=52&lomin=19&lamax=52.1&lomax=19.1"),
         ("adsbdb", f"{ADSBDB_URL}/callsign/LOT1"),
+        ("adsb_lol", "https://api.adsb.lol/v2/lat/52.1/lon/19.4/dist/50"),
         ("google", "https://www.google.com"),
     ]
     results = {}

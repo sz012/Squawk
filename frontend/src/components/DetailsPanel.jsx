@@ -44,7 +44,6 @@ export default function DetailsPanel({ flight, onClose }) {
 
   const rows = [
     ['SQK', `${flight.squawk || '----'}${special ? ` · ${special}` : ''}`, special ? 'alert' : ''],
-    ['COUNTRY', flight.country ?? '—'],
     ['ALT', flight.altitude != null ? `${Math.round(flight.altitude)} m` : '—'],
     ['GS', flight.velocity != null ? `${Math.round(flight.velocity * 3.6)} km/h` : '—'],
     ['TRK', flight.track != null ? `${Math.round(flight.track)}°` : '—'],
