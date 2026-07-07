@@ -103,7 +103,7 @@ async def get_flights():
     try:
         flights = await _fetch_flights()
     except httpx.HTTPError as exc:
-        logger.warning("OpenSky niedostepne: %r", exc)
+        logger.warning("zrodlo pozycji niedostepne: %r", exc)
         return {"cached": True, "stale": True, "count": len(_cache["data"]), "flights": _cache["data"]}
 
     _cache["time"] = now
@@ -111,22 +111,24 @@ async def get_flights():
     return {"cached": False, "count": len(flights), "flights": flights}
 
 
-@app.get("/debug")
-async def debug_connectivity():
-    #TYMCZASOWA diagnostyka polaczen wychodzacych z serwera - do usuniecia po deployu
-    targets = [
-        ("adsb_lol_trace", TRACE_URL.format(suffix="c4", icao24="a8f5c4")),
-        ("google", "https://www.google.com"),
-    ]
-    results = {}
-    for name, url in targets:
-        try:
-            async with httpx.AsyncClient(timeout=httpx.Timeout(8, connect=5), follow_redirects=True) as client:
-                r = await client.get(url)
-            results[name] = f"ok {r.status_code}"
-        except Exception as exc:
-            results[name] = f"BLAD {exc!r}"
-    return results
+def _current_leg(points: list) -> list:
+    #trace_full to cala dzisiejsza historia samolotu (wiele rejsow) - wycinam niepotrzebny odcinek
+    cut = 0
+    prev_t = None
+    seen_air = False
+    for i in range(len(points) - 1, -1, -1):
+        p = points[i]
+        if prev_t is not None and prev_t - p[0] > 1800:
+            cut = i + 1
+            break
+        on_ground = p[3] == "ground"
+        if on_ground and seen_air:
+            cut = i
+            break
+        if not on_ground:
+            seen_air = True
+        prev_t = p[0]
+    return points[cut:]
 
 
 @app.get("/track/{icao24}")
@@ -149,7 +151,8 @@ async def get_track(icao24: str):
         return {"path": []}
 
     #punkt trace - [offset_s, lat, lon, wysokosc, predkosc, ...]
-    path = [[p[1], p[2]] for p in (payload.get("trace") or []) if p[1] is not None and p[2] is not None]
+    leg = _current_leg(payload.get("trace") or [])
+    path = [[p[1], p[2]] for p in leg if p[1] is not None and p[2] is not None]
     path = path[-2000:]
     result = {"path": path}
     if len(_track_cache) > 300:
