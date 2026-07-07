@@ -89,7 +89,8 @@ export default function App() {
     let alive = true
     fetchTrack(selectedId)
       .then((d) => {
-        if (alive && d.path.length > 1) setTrackPath(d.path)
+        //sciezka z wlascicielem
+        if (alive && d.path.length > 1) setTrackPath({ icao24: selectedId, path: d.path })
       })
       .catch(() => {}) //brak trasy z API - zostaje przy wlasnej historii
     return () => {
@@ -102,15 +103,17 @@ export default function App() {
   const showChip = status === 'loading' || (status === 'error' && flights.length === 0)
   const shown = hideGround ? flights.filter((f) => !f.on_ground) : flights
   const selected = shown.find((f) => f.icao24 === selectedId) ?? null
-  //sciezka z API ma pierwszenstwo, fallback - wlasna historia z odswiezen
-  const trail = trackPath ?? (selected ? [...(trailsRef.current.get(selected.icao24)?.pts ?? [])] : [])
+  //sciezka z API liczy sie tylko gdy nalezy do wybranego, inaczej wlasna historia z odswiezen
+  const apiTrail = trackPath && selected && trackPath.icao24 === selected.icao24 ? trackPath.path : null
+  const trail = apiTrail ?? (selected ? [...(trailsRef.current.get(selected.icao24)?.pts ?? [])] : [])
 
   //sciezka z API to stan na moment kliku - kolejne odswiezenia dopisuja biezaca pozycje
   useEffect(() => {
-    if (!trackPath || !selected) return
-    const last = trackPath[trackPath.length - 1]
+    if (!trackPath || !selected || trackPath.icao24 !== selected.icao24) return
+    const pts = trackPath.path
+    const last = pts[pts.length - 1]
     if (last[0] !== selected.lat || last[1] !== selected.lon) {
-      setTrackPath([...trackPath, [selected.lat, selected.lon]])
+      setTrackPath({ icao24: trackPath.icao24, path: [...pts, [selected.lat, selected.lon]] })
     }
   }, [trackPath, selected])
 
