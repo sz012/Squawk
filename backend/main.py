@@ -39,9 +39,15 @@ CACHE_TTL = 6
 
 app = FastAPI(title="Squawk API")
 
+#dozwolone originy - lokalnie porty vite, na produkcji domena frontendu ze zmiennej env
+CORS_ORIGINS = os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:5173,http://localhost:5174,http://localhost:5175",
+).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://localhost:5175"],  #porty zapasowe vite
+    allow_origins=CORS_ORIGINS,
     allow_methods=["GET"],
     allow_headers=["*"],
 )
