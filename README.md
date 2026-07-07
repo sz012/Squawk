@@ -2,6 +2,8 @@
 
 Live ADS-B mini-radar showing air traffic over Poland. A FastAPI backend fetches and caches aircraft positions from adsb.lol, a React + Leaflet frontend draws them on a dark map. "Squawk" is the four-digit transponder code that air traffic control assigns to every flight.
 
+**Live: [squawk-inky.vercel.app](https://squawk-inky.vercel.app)** (backend runs on a free tier and sleeps when idle - the first load may take up to a minute to wake it up)
+
 ![Squawk radar](docs/radar.png)
 
 ## Features
@@ -11,7 +13,7 @@ Live ADS-B mini-radar showing air traffic over Poland. A FastAPI backend fetches
 - click a plane: airline, route (from -> to), aircraft type, squawk code, altitude, speed, vertical rate
 - full flight path drawn from takeoff, extended live while the plane flies
 - ground targets filter, hover tooltip, smooth movement between updates
-- link status: LIVE / STALE (last known data when OpenSky throttles) / NO LINK
+- link status: LIVE / STALE (last known data when the feed is unreachable) / NO LINK
 - UTC clock and a radar ping on each data refresh
 
 ## Run locally
