@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 import time
 
@@ -11,6 +12,9 @@ from fastapi.middleware.cors import CORSMiddleware
 #http://localhost:8000/flights / http://localhost:8000/docs
 
 load_dotenv()  #wczytuje backend/.env jesli istnieje
+
+#logi trafiaja do wyjscia uvicorna (widoczne tez w panelu hostingu)
+logger = logging.getLogger("uvicorn.error")
 
 #surowe stany sledzonych samolotow
 OPENSKY_URL = "https://opensky-network.org/api/states/all"
@@ -122,8 +126,8 @@ async def get_flights():
 
     try:
         flights = await _fetch_flights()
-    except httpx.HTTPError:
-        #opensky nie odpowiada - ostatnie znane dane zamiast bledu
+    except httpx.HTTPError as exc:
+        logger.warning("OpenSky niedostepne: %r", exc)
         return {"cached": True, "stale": True, "count": len(_cache["data"]), "flights": _cache["data"]}
 
     _cache["time"] = now
@@ -146,8 +150,9 @@ async def get_track(icao24: str):
             response = await client.get(TRACK_URL, params={"icao24": icao24, "time": 0}, headers=headers)
             response.raise_for_status()
             payload = response.json()
-    except httpx.HTTPError:
+    except httpx.HTTPError as exc:
         #brak sciezki to nie blad krytyczny - frontend uzyje wlasnej historii
+        logger.warning("OpenSky tracks niedostepne dla %s: %r", icao24, exc)
         return {"path": []}
 
     #punkt sciezki - [czas, lat, lon, wysokosc, kurs, on_ground]
