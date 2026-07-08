@@ -4,7 +4,7 @@ import os
 import time
 
 import httpx
-from fastapi import FastAPI
+from fastapi import FastAPI, Path
 from fastapi.middleware.cors import CORSMiddleware
 
 #./.venv/bin/uvicorn main:app --reload --port 8000
@@ -132,8 +132,9 @@ def _current_leg(points: list) -> list:
 
 
 @app.get("/track/{icao24}")
-async def get_track(icao24: str):
+async def get_track(icao24: str = Path(pattern=r"^[0-9a-fA-F]{6}$")):
     #pelna sciezka lotu od startu, cache 60s
+    icao24 = icao24.lower()
     now = time.time()
     cached = _track_cache.get(icao24)
     if cached and now - cached[0] < 60:
@@ -162,7 +163,10 @@ async def get_track(icao24: str):
 
 
 @app.get("/flightinfo/{icao24}/{callsign}")
-async def get_flight_info(icao24: str, callsign: str):
+async def get_flight_info(
+    icao24: str = Path(pattern=r"^[0-9a-fA-F]{6}$"),
+    callsign: str = Path(pattern=r"^[A-Za-z0-9]{1,8}$"),
+):
     #wzbogacenie - linia lotnicza, trasa skad-dokad, typ maszyny (adsbdb.com)
     now = time.time()
     key = f"{icao24}:{callsign}"

@@ -9,13 +9,13 @@ export async function fetchFlights() {
 }
 
 export async function fetchTrack(icao24) {
-  const res = await fetch(`${API_BASE}/track/${icao24}`)
+  const res = await fetch(`${API_BASE}/track/${encodeURIComponent(icao24)}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }
 
 export async function fetchFlightInfo(icao24, callsign) {
-  const res = await fetch(`${API_BASE}/flightinfo/${icao24}/${callsign}`)
+  const res = await fetch(`${API_BASE}/flightinfo/${encodeURIComponent(icao24)}/${encodeURIComponent(callsign)}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }

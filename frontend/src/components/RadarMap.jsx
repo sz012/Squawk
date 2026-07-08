@@ -43,7 +43,7 @@ export default function RadarMap({ flights, selectedId, onSelect, trail }) {
       <ZoomControl position="bottomright" />
       <DeselectOnClick onSelect={onSelect} />
       <ZoomPerfGuard />
-      {/*slad trasy wybranego samolotu - historia zebrana z kolejnych odswiezen*/}
+      {/*slad trasy wybranego samolotu - pelny odcinek z api albo wlasna historia*/}
       {trail.length > 1 && (
         <Polyline positions={trail} pathOptions={{ color: '#ffb454', weight: 2, opacity: 0.45 }} interactive={false} />
       )}
