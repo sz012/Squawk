@@ -2,7 +2,8 @@
 import { useEffect, useRef, useState } from 'react'
 import RadarMap from './components/RadarMap.jsx'
 import DetailsPanel from './components/DetailsPanel.jsx'
-import { fetchFlights, fetchTrack } from './api.js'
+import AirportBoard from './components/AirportBoard.jsx'
+import { fetchFlights, fetchTrack, fetchBoard } from './api.js'
 import './App.css'
 
 const REFRESH_MS = 10000 //co ile pytam backend o swieze pozycje
@@ -26,6 +27,10 @@ export default function App() {
   const [trackPath, setTrackPath] = useState(null)
   //zakres sladu: leg - biezacy odcinek, day - wszystkie dzisiejsze przeloty maszyny
   const [trackScope, setTrackScope] = useState('leg')
+  //tablica lotniska
+  const [boardOpen, setBoardOpen] = useState(false)
+  const [boardAirport, setBoardAirport] = useState('WAW')
+  const [board, setBoard] = useState(null) //dane tablicy, null - laduje sie
 
   useEffect(() => {
     let alive = true
@@ -100,6 +105,23 @@ export default function App() {
     }
   }, [selectedId, trackScope])
 
+  //tablica - pobranie po otwarciu/zmianie lotniska + odswiezanie co 30s poki otwarta
+  useEffect(() => {
+    if (!boardOpen) return
+    let alive = true
+    setBoard(null)
+    const load = () =>
+      fetchBoard(boardAirport)
+        .then((d) => alive && setBoard(d))
+        .catch(() => alive && setBoard({ error: true }))
+    load()
+    const id = setInterval(load, 30000)
+    return () => {
+      alive = false
+      clearInterval(id)
+    }
+  }, [boardOpen, boardAirport])
+
   const airborne = flights.filter((f) => !f.on_ground).length
   const badge = BADGES[status]
   const showChip = status === 'loading' || (status === 'error' && flights.length === 0)
@@ -135,6 +157,9 @@ export default function App() {
         </div>
 
         <div className="stats">
+          <button className={`toggle ${boardOpen ? 'on' : ''}`} onClick={() => setBoardOpen((v) => !v)}>
+            BOARD
+          </button>
           <button className={`toggle ${hideGround ? 'on' : ''}`} onClick={() => setHideGround((v) => !v)}>
             {hideGround ? 'GND OFF' : 'GND ON'}
           </button>
@@ -161,6 +186,17 @@ export default function App() {
         <div className={`init-chip ${status === 'error' ? 'error' : ''}`}>
           {status === 'error' ? 'no data link — retrying' : 'acquiring ads-b signal'}
         </div>
+      )}
+
+      {boardOpen && (
+        <AirportBoard
+          board={board}
+          airport={boardAirport}
+          onAirport={setBoardAirport}
+          onPick={setSelectedId}
+          selectedId={selectedId}
+          onClose={() => setBoardOpen(false)}
+        />
       )}
 
       {selected && (

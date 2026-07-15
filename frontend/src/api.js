@@ -13,6 +13,12 @@ export async function fetchTrack(icao24, scope = 'leg') {
   return res.json()
 }
 
+export async function fetchBoard(airport) {
+  const res = await fetch(`${API_BASE}/board/${encodeURIComponent(airport)}`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
 export async function fetchFlightInfo(icao24, callsign) {
   const res = await fetch(`${API_BASE}/flightinfo/${encodeURIComponent(icao24)}/${encodeURIComponent(callsign)}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)

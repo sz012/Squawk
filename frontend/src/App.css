@@ -447,6 +447,137 @@
   font-family: var(--font-data);
 }
 
+/*tablica lotniska - wysuwany panel z lewej*/
+.board {
+  position: absolute;
+  top: 78px;
+  left: 14px;
+  bottom: 14px;
+  width: 300px;
+  z-index: 1100;
+  padding: 12px 14px;
+  overflow-y: auto;
+  background: var(--panel);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+}
+
+.board-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.board-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  color: var(--accent);
+}
+
+.board-pills {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.board-pills button {
+  flex: 1;
+  padding: 5px 0;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: none;
+  color: var(--dim);
+  font-family: var(--font-data);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+}
+
+.board-pills button.on {
+  color: var(--accent);
+  border-color: rgba(255, 180, 84, 0.4);
+  background: var(--accent-soft);
+}
+
+.board-section {
+  margin: 10px 0 4px;
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  color: var(--dim);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 4px;
+}
+
+.board-empty {
+  padding: 10px 2px;
+  font-size: 11px;
+  color: var(--dim);
+  font-family: var(--font-data);
+}
+
+/*wiersz tablicy - klik zaznacza samolot na mapie*/
+.board-row {
+  display: grid;
+  grid-template-columns: 76px 1fr 58px;
+  gap: 8px;
+  align-items: baseline;
+  width: 100%;
+  padding: 6px 4px;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  border-radius: 6px;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.board-row:hover {
+  background: var(--accent-soft);
+}
+
+.board-row.sel {
+  background: var(--accent-soft);
+  outline: 1px solid rgba(255, 180, 84, 0.4);
+}
+
+.br-cs {
+  font-family: var(--font-data);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.br-mid {
+  font-family: var(--font-data);
+  font-size: 11px;
+  color: var(--accent);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.br-mid i {
+  font-style: normal;
+  color: var(--dim);
+  margin-left: 6px;
+  font-size: 10px;
+}
+
+.br-eta {
+  font-family: var(--font-data);
+  font-size: 11px;
+  color: var(--text);
+  text-align: right;
+}
+
+.br-eta.out {
+  color: var(--accent);
+}
+
 /*na waskim ekranie chowam podtytul, zeby pasek sie miescil, panel schodzi na dol*/
 @media (max-width: 640px) {
   .brand-sub {
@@ -463,5 +594,12 @@
     left: 14px;
     right: 14px;
     width: auto;
+  }
+
+  .board {
+    left: 14px;
+    right: 14px;
+    width: auto;
+    bottom: 40%;
   }
 }
