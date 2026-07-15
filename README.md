@@ -14,6 +14,7 @@ Live ADS-B mini-radar showing air traffic over Poland. A FastAPI backend fetches
 - full flight path drawn from takeoff, extended live while the plane flies
 - track switch: current leg or all of the aircraft's flights today
 - ground targets filter, hover tooltip, smooth movement between updates
+- airport board: live arrivals/departures for WAW/KRK/GDN/KTW
 - link status: LIVE / STALE (last known data when the feed is unreachable) / NO LINK
 - UTC clock and a radar ping on each data refresh
 
