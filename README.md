@@ -12,6 +12,7 @@ Live ADS-B mini-radar showing air traffic over Poland. A FastAPI backend fetches
 - icons rotated to the aircraft's track, with a velocity vector (longer = faster)
 - click a plane: airline, route (from -> to), aircraft type, squawk code, altitude, speed, vertical rate
 - full flight path drawn from takeoff, extended live while the plane flies
+- track switch: current leg or all of the aircraft's flights today
 - ground targets filter, hover tooltip, smooth movement between updates
 - link status: LIVE / STALE (last known data when the feed is unreachable) / NO LINK
 - UTC clock and a radar ping on each data refresh

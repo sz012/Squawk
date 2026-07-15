@@ -1,5 +1,4 @@
 //komunikacja z backendem FastAPI
-//adres do nadpisania zmienna VITE_API_URL przy ewentualnym deployu, lokalnie fallback
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
 export async function fetchFlights() {
@@ -8,8 +7,8 @@ export async function fetchFlights() {
   return res.json()
 }
 
-export async function fetchTrack(icao24) {
-  const res = await fetch(`${API_BASE}/track/${encodeURIComponent(icao24)}`)
+export async function fetchTrack(icao24, scope = 'leg') {
+  const res = await fetch(`${API_BASE}/track/${encodeURIComponent(icao24)}?scope=${scope}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }

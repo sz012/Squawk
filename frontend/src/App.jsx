@@ -24,6 +24,8 @@ export default function App() {
   const trailsRef = useRef(new Map())
   //pelna sciezka wybranego lotu od startu (z API), null - wlasna historia
   const [trackPath, setTrackPath] = useState(null)
+  //zakres sladu: leg - biezacy odcinek, day - wszystkie dzisiejsze przeloty maszyny
+  const [trackScope, setTrackScope] = useState('leg')
 
   useEffect(() => {
     let alive = true
@@ -87,7 +89,7 @@ export default function App() {
     setTrackPath(null)
     if (!selectedId) return
     let alive = true
-    fetchTrack(selectedId)
+    fetchTrack(selectedId, trackScope)
       .then((d) => {
         //sciezka z wlascicielem
         if (alive && d.path.length > 1) setTrackPath({ icao24: selectedId, path: d.path })
@@ -96,7 +98,7 @@ export default function App() {
     return () => {
       alive = false
     }
-  }, [selectedId])
+  }, [selectedId, trackScope])
 
   const airborne = flights.filter((f) => !f.on_ground).length
   const badge = BADGES[status]
@@ -161,7 +163,14 @@ export default function App() {
         </div>
       )}
 
-      {selected && <DetailsPanel flight={selected} onClose={() => setSelectedId(null)} />}
+      {selected && (
+        <DetailsPanel
+          flight={selected}
+          scope={trackScope}
+          onScope={setTrackScope}
+          onClose={() => setSelectedId(null)}
+        />
+      )}
 
       <footer className="databar">DATA · adsb.lol · refresh {REFRESH_MS / 1000}s</footer>
     </div>

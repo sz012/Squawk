@@ -372,6 +372,43 @@
   color: var(--danger);
 }
 
+/*przelacznik zakresu sladu - biezacy odcinek / caly dzien*/
+.scope-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 8px 0 6px;
+}
+
+.scope-label {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--dim);
+}
+
+.scope-switch {
+  display: flex;
+  gap: 4px;
+}
+
+.scope-switch button {
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: none;
+  color: var(--dim);
+  font-family: var(--font-data);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+}
+
+.scope-switch button.on {
+  color: var(--accent);
+  border-color: rgba(255, 180, 84, 0.4);
+  background: var(--accent-soft);
+}
+
 .panel-close {
   border: none;
   background: none;

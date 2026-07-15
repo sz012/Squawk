@@ -9,7 +9,7 @@ const SPECIAL_SQUAWKS = {
   7700: 'EMERGENCY',
 }
 
-export default function DetailsPanel({ flight, onClose }) {
+export default function DetailsPanel({ flight, scope, onScope, onClose }) {
   //wzbogacenie z adsbdb - linia, trasa, typ maszyny, poki sie laduje to null
   const [info, setInfo] = useState(null)
 
@@ -83,6 +83,19 @@ export default function DetailsPanel({ flight, onClose }) {
           </div>
         </div>
       )}
+
+      {/*zakres rysowanego sladu - biezacy odcinek albo wszystkie dzisiejsze przeloty*/}
+      <div className="scope-row">
+        <span className="scope-label">TRACK</span>
+        <div className="scope-switch">
+          <button className={scope === 'leg' ? 'on' : ''} onClick={() => onScope('leg')}>
+            LEG
+          </button>
+          <button className={scope === 'day' ? 'on' : ''} onClick={() => onScope('day')}>
+            DAY
+          </button>
+        </div>
+      </div>
 
       <dl className="panel-rows">
         {rows.map(([label, value, cls]) => (

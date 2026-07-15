@@ -4,7 +4,7 @@ import os
 import time
 
 import httpx
-from fastapi import FastAPI, Path
+from fastapi import FastAPI, Path, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 #./.venv/bin/uvicorn main:app --reload --port 8000
@@ -132,11 +132,15 @@ def _current_leg(points: list) -> list:
 
 
 @app.get("/track/{icao24}")
-async def get_track(icao24: str = Path(pattern=r"^[0-9a-fA-F]{6}$")):
-    #pelna sciezka lotu od startu, cache 60s
+async def get_track(
+    icao24: str = Path(pattern=r"^[0-9a-fA-F]{6}$"),
+    scope: str = Query("leg", pattern=r"^(leg|day)$"),  #leg - biezacy odcinek, day - wszystkie dzisiejsze przeloty
+):
+    #sciezka lotu, cache 60s
     icao24 = icao24.lower()
     now = time.time()
-    cached = _track_cache.get(icao24)
+    key = f"{icao24}:{scope}"
+    cached = _track_cache.get(key)
     if cached and now - cached[0] < 60:
         return cached[1]
 
@@ -152,13 +156,17 @@ async def get_track(icao24: str = Path(pattern=r"^[0-9a-fA-F]{6}$")):
         return {"path": []}
 
     #punkt trace - [offset_s, lat, lon, wysokosc, predkosc, ...]
-    leg = _current_leg(payload.get("trace") or [])
-    path = [[p[1], p[2]] for p in leg if p[1] is not None and p[2] is not None]
-    path = path[-2000:]
+    points = payload.get("trace") or []
+    if scope == "leg":
+        points = _current_leg(points)
+    path = [[p[1], p[2]] for p in points if p[1] is not None and p[2] is not None]
+    if len(path) > 2000:
+        step = len(path) // 2000 + 1
+        path = path[::step]
     result = {"path": path}
     if len(_track_cache) > 300:
         _track_cache.clear()
-    _track_cache[icao24] = (now, result)
+    _track_cache[key] = (now, result)
     return result
 
 
