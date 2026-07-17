@@ -1,7 +1,5 @@
 # Squawk
 
-![CI](https://github.com/sz012/Squawk/actions/workflows/ci.yml/badge.svg)
-
 Live ADS-B mini-radar showing air traffic over Poland. A FastAPI backend fetches and caches aircraft positions from adsb.lol, a React + Leaflet frontend draws them on a dark map. "Squawk" is the four-digit transponder code that air traffic control assigns to every flight.
 
 **Live demo - [squawk-inky.vercel.app](https://squawk-inky.vercel.app)** Hosted on free tiers — the backend may take ~30–60 s to wake up on the first visit.
