@@ -6,7 +6,7 @@ Live ADS-B mini-radar. A FastAPI backend fetches and caches aircraft positions f
 
 **Live demo - [squawk-inky.vercel.app](https://squawk-inky.vercel.app)** Hosted on free tiers — the backend may take ~30–60 s to wake up on the first visit.
 
-![Squawk radar](docs/radar.png)
+![Squawk radar](docs/radar_old.png)
 
 ## Features
 
