@@ -48,6 +48,11 @@ def test_current_leg_jeden_ciagly_rejs_bez_ciec():
 def test_current_leg_pusta_lista():
     assert main._current_leg([]) == []
 
+#klucz sektora - zaokraglanie do siatki 0.1 stopnia
+def test_sector_key_zaokragla():
+    assert main._sector_key(52.149, 19.351) == "52.1,19.4"
+    assert main._sector_key(-33.87, 151.21) == "-33.9,151.2"
+
 #geometria, odleglosc i namiar
 def test_haversine_stopien_szerokosci():
     d = main._haversine_km(0.0, 0.0, 1.0, 0.0)

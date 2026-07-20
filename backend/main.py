@@ -15,7 +15,11 @@ from fastapi.middleware.cors import CORSMiddleware
 logger = logging.getLogger("uvicorn.error")
 
 #pozycje na zywo - otwarte api adsb.lol (okrag: srodek PL, promien 250 mil morskich)
-STATES_URL = "https://api.adsb.lol/v2/lat/52.1/lon/19.4/dist/250"
+#sektor = okrag 250 mil morskich (limit adsb.lol) wokol srodka podanego przez frontend
+STATES_URL = "https://api.adsb.lol/v2/lat/{lat}/lon/{lon}/dist/250"
+#sektor domowy - srodek Polski (uzywa go tez tablica lotniska)
+HOME_LAT = 52.1
+HOME_LON = 19.4
 #pelna sciezka lotu - endpoint tar1090 na infrastrukturze adsb.lol
 TRACE_URL = "https://globe.adsb.lol/data/traces/{suffix}/trace_full_{icao24}.json"
 #spolecznosciowa baza tras i samolotow (bez klucza)
@@ -44,7 +48,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-_cache = {"time": 0.0, "data": []}
+_sector_cache = {}  #klucz sektora -> {"time", "data"}; radar podaza za mapa
 _track_cache = {}  #icao24 -> (czas, wynik)
 _info_cache = {}  #icao24:callsign -> (czas, wynik)
 _route_cache = {}  #callsign -> (czas, trasa)
@@ -87,10 +91,14 @@ def _parse_aircraft(ac: dict) -> dict:
     }
 
 
-async def _fetch_flights() -> list:
-    #pobiera swieze pozycje z adsb.lol
+def _sector_key(lat: float, lon: float) -> str:
+    return f"{round(lat, 1)},{round(lon, 1)}"
+
+
+async def _fetch_flights(lat: float, lon: float) -> list:
+    #pobieram swieze pozycje z adsb.lol dla sektora
     async with _http_client() as client:
-        response = await client.get(STATES_URL)
+        response = await client.get(STATES_URL.format(lat=lat, lon=lon))
         response.raise_for_status()
         payload = response.json()
 
@@ -104,21 +112,35 @@ async def _fetch_flights() -> list:
     return flights
 
 
-@app.get("/flights")
-async def get_flights():
-    #zwraca liste samolotow
+async def _flights_cached(lat: float, lon: float):
+    #pozycje dla sektora z cache 6s, zwraca (lista, czy_stale)
     now = time.time()
-    if now - _cache["time"] < CACHE_TTL and _cache["data"]:
-        return {"cached": True, "count": len(_cache["data"]), "flights": _cache["data"]}
+    key = _sector_key(lat, lon)
+    entry = _sector_cache.get(key)
+    if entry and now - entry["time"] < CACHE_TTL and entry["data"]:
+        return entry["data"], False
 
     try:
-        flights = await _fetch_flights()
+        flights = await _fetch_flights(lat, lon)
     except httpx.HTTPError as exc:
         logger.warning("zrodlo pozycji niedostepne: %r", exc)
-        return {"cached": True, "stale": True, "count": len(_cache["data"]), "flights": _cache["data"]}
+        return (entry["data"] if entry else []), True
 
-    _cache["time"] = now
-    _cache["data"] = flights
+    if len(_sector_cache) > 40:
+        _sector_cache.clear()
+    _sector_cache[key] = {"time": now, "data": flights}
+    return flights, False
+
+
+@app.get("/flights")
+async def get_flights(
+    lat: float = Query(HOME_LAT, ge=-85, le=85),
+    lon: float = Query(HOME_LON, ge=-180, le=180),
+):
+    #zwracam liste samolotow dla sektora wokol (lat, lon)
+    flights, stale = await _flights_cached(lat, lon)
+    if stale:
+        return {"cached": True, "stale": True, "count": len(flights), "flights": flights}
     return {"cached": False, "count": len(flights), "flights": flights}
 
 
@@ -286,16 +308,8 @@ async def get_board(airport: str = Path(pattern=r"^[A-Z]{3}$")):
     if cached and now - cached[0] < 30:
         return cached[1]
 
-    #biezace pozycje - z cache /flights albo swieze
-    if now - _cache["time"] < CACHE_TTL and _cache["data"]:
-        flights = _cache["data"]
-    else:
-        try:
-            flights = await _fetch_flights()
-            _cache["time"] = now
-            _cache["data"] = flights
-        except httpx.HTTPError:
-            flights = _cache["data"]
+    #tablica zawsze patrzy na sektor domowy, niezaleznie gdzie uzytkownik przesunal mape
+    flights, _stale = await _flights_cached(HOME_LAT, HOME_LON)
 
     candidates = []
     for f in flights:
