@@ -1,8 +1,8 @@
 //komunikacja z backendem FastAPI
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
-export async function fetchFlights() {
-  const res = await fetch(`${API_BASE}/flights`)
+export async function fetchFlights(lat, lon) {
+  const res = await fetch(`${API_BASE}/flights?lat=${lat.toFixed(3)}&lon=${lon.toFixed(3)}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }

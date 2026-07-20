@@ -7,6 +7,13 @@ import { fetchFlights, fetchTrack, fetchBoard } from './api.js'
 import './App.css'
 
 const REFRESH_MS = 10000 //co ile pytam backend o swieze pozycje
+const HOME = { lat: 52.1, lon: 19.4 } //sektor domowy - srodek polski
+
+//etykieta sektora
+function sectorLabelFor(lat, lon) {
+  return `${Math.abs(lat).toFixed(1)}${lat >= 0 ? 'N' : 'S'} ${Math.abs(lon).toFixed(1)}${lon >= 0 ? 'E' : 'W'}`
+}
+
 
 //teksty i style plakietki statusu
 const BADGES = {
@@ -27,6 +34,18 @@ export default function App() {
   const [trackPath, setTrackPath] = useState(null)
   //zakres sladu: leg - biezacy odcinek, day - wszystkie dzisiejsze przeloty maszyny
   const [trackScope, setTrackScope] = useState('leg')
+  //sektor: ref zamiast stanu, zeby zmiana nie restartowala petli odpytywania
+  //sektor pobierania - zmienia sie wylacznie swiadoma akcja (set sector / home / tablica)
+  const [sector, setSector] = useState(HOME)
+  const sectorRef = useRef(HOME)
+  const loadRef = useRef(null) //aktualna funkcja load, wolana przy zmianie sektora
+  const firstSector = useRef(true) //pierwsze ustawienie nie ma czyscic mapy
+  //tryb wyboru: okrag wyboru podaza za srodkiem widoku az do zatwierdzenia
+  const [pickMode, setPickMode] = useState(false)
+  const [ghost, setGhost] = useState(HOME)
+  const viewCenterRef = useRef(HOME) //ostatni srodek widoku mapy
+  //cel dolotu kamery - klik w tablicy albo przycisk home
+  const [focus, setFocus] = useState(null)
   //tablica lotniska
   const [boardOpen, setBoardOpen] = useState(false)
   const [boardAirport, setBoardAirport] = useState('WAW')
@@ -37,8 +56,9 @@ export default function App() {
 
     async function load() {
       try {
-        const data = await fetchFlights()
-        if (!alive) return
+        const s = sectorRef.current
+        const data = await fetchFlights(s.lat, s.lon)
+        if (!alive || sectorRef.current !== s) return
 
         const trails = trailsRef.current
         const seen = new Set()
@@ -74,6 +94,7 @@ export default function App() {
       if (!document.hidden) load() //powrot na karte - od razu swieze dane zamiast czekania na tick
     }
 
+    loadRef.current = load //zmiana sektora wywoluje swieze pobranie natychmiast
     load() //pierwsze pobranie zawsze, nawet gdy karta w tle
     const id = setInterval(poll, REFRESH_MS)
     document.addEventListener('visibilitychange', onVisible)
@@ -122,6 +143,60 @@ export default function App() {
     }
   }, [boardOpen, boardAirport])
 
+  //zmiana sektora - czyszcze stare cele i od razu pobieram nowe - 1-3s zamiast 10s
+  useEffect(() => {
+    sectorRef.current = sector
+    if (firstSector.current) {
+      firstSector.current = false
+      return
+    }
+    setFlights([])
+    setStatus('loading')
+    loadRef.current?.()
+  }, [sector])
+
+  //esc wychodzi z trybu wyboru sektora
+  useEffect(() => {
+    if (!pickMode) return
+    const onKey = (e) => e.key === 'Escape' && setPickMode(false)
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [pickMode])
+
+  //ruch mapy nie zmienia sektora - tylko aktualizuje srodek widoku i okregu wyboru
+  function handleMoveEnd(lat, lon) {
+    viewCenterRef.current = { lat, lon }
+    if (pickMode) setGhost({ lat, lon })
+  }
+
+  function startPick() {
+    setGhost(viewCenterRef.current)
+    setPickMode(true)
+  }
+
+  function confirmSector() {
+    setPickMode(false)
+    setSector({ ...ghost })
+  }
+
+  function goHome() {
+    setPickMode(false)
+    setSector(HOME)
+    setFocus({ ...HOME, zoom: 6, exact: true, ts: Date.now() })
+  }
+
+  //klik w wiersz tablicy - zaznacz i dolec kamera - gdy sektor za granica - swiadomy powrot do domu
+  function pickFromBoard(icao24) {
+    setSelectedId(icao24)
+    const f = flights.find((x) => x.icao24 === icao24)
+    if (f) {
+      setFocus({ lat: f.lat, lon: f.lon, zoom: 7, exact: false, ts: Date.now() })
+    } else {
+      setSector(HOME)
+      setFocus({ ...HOME, zoom: 6, exact: true, ts: Date.now() })
+    }
+  }
+
   const airborne = flights.filter((f) => !f.on_ground).length
   const badge = BADGES[status]
   const showChip = status === 'loading' || (status === 'error' && flights.length === 0)
@@ -143,7 +218,17 @@ export default function App() {
 
   return (
     <div className="app">
-      <RadarMap flights={shown} selectedId={selectedId} onSelect={setSelectedId} trail={trail} />
+      <RadarMap
+        flights={shown}
+        selectedId={selectedId}
+        onSelect={setSelectedId}
+        trail={trail}
+        onMoveEnd={handleMoveEnd}
+        focus={focus}
+        sector={sector}
+        ghost={ghost}
+        pickMode={pickMode}
+      />
       {lastUpdate && <div className="ping" key={lastUpdate.getTime()} />}
       <div className="vignette" />
 
@@ -152,15 +237,25 @@ export default function App() {
           <img src="/favicon.svg" width="30" height="30" alt="" />
           <div>
             <span className="brand-name">SQUAWK</span>
-            <span className="brand-sub">ads-b live · sector PL</span>
+            <span className="brand-sub">
+              ads-b live · sector {sectorLabelFor(pickMode ? ghost.lat : sector.lat, pickMode ? ghost.lon : sector.lon)}
+            </span>
           </div>
+          {/*sterowanie sektorem - nawigacja po lewej, stan i widoki po prawej*/}
+          <button className={`toggle ${pickMode ? 'on' : ''}`} onClick={() => (pickMode ? setPickMode(false) : startPick())}>
+            SECTOR
+          </button>
+          <button className="toggle" onClick={goHome}>
+            HOME
+          </button>
         </div>
 
         <div className="stats">
           <button className={`toggle ${boardOpen ? 'on' : ''}`} onClick={() => setBoardOpen((v) => !v)}>
             BOARD
           </button>
-          <button className={`toggle ${hideGround ? 'on' : ''}`} onClick={() => setHideGround((v) => !v)}>
+          {/*swieci sie gdy cele naziemne sa pokazywane*/}
+          <button className={`toggle ${hideGround ? '' : 'on'}`} onClick={() => setHideGround((v) => !v)}>
             {hideGround ? 'GND OFF' : 'GND ON'}
           </button>
           <span className={`badge ${badge.cls}`}>
@@ -193,7 +288,7 @@ export default function App() {
           board={board}
           airport={boardAirport}
           onAirport={setBoardAirport}
-          onPick={setSelectedId}
+          onPick={pickFromBoard}
           selectedId={selectedId}
           onClose={() => setBoardOpen(false)}
         />
@@ -206,6 +301,18 @@ export default function App() {
           onScope={setTrackScope}
           onClose={() => setSelectedId(null)}
         />
+      )}
+
+      {pickMode && (
+        <div className="pick-bar">
+          <span>
+            AIM WITH MAP · <b>{sectorLabelFor(ghost.lat, ghost.lon)}</b>
+          </span>
+          <button onClick={confirmSector}>SET SECTOR</button>
+          <button onClick={() => setPickMode(false)}>
+            CANCEL
+          </button>
+        </div>
       )}
 
       <footer className="databar">DATA · adsb.lol · refresh {REFRESH_MS / 1000}s</footer>
