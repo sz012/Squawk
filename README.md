@@ -2,7 +2,7 @@
 
 ![CI](https://github.com/sz012/Squawk/actions/workflows/ci.yml/badge.svg)
 
-Live ADS-B mini-radar. A FastAPI backend fetches and caches aircraft positions from adsb.lol, a React + Leaflet frontend draws them on a dark map - move anywhere in the world and the radar follows. "Squawk" is the four-digit transponder code that air traffic control assigns to every flight.
+Live ADS-B mini-radar. A FastAPI backend fetches and caches aircraft positions from adsb.fi, a React + Leaflet frontend draws them on a dark map - move anywhere in the world and the radar follows. "Squawk" is the four-digit transponder code that air traffic control assigns to every flight.
 
 **Live demo - [squawk-inky.vercel.app](https://squawk-inky.vercel.app)** Hosted on free tiers — the backend may take ~30–60 s to wake up on the first visit.
 
@@ -46,7 +46,8 @@ No API keys needed. If the data source is unreachable, the app keeps showing las
 
 ## Data & credits
 
-- live positions and flight tracks: [adsb.lol](https://adsb.lol/) (open community API)
+- live positions: [adsb.fi](https://adsb.fi/) (open community API)
+- flight tracks: [adsb.lol](https://adsb.lol/) (open community API)
 - routes and aircraft info: [adsbdb](https://www.adsbdb.com/)
 - map tiles: © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, © [CARTO](https://carto.com/attributions)
 - font: [B612](https://b612-font.com/) (SIL Open Font License), designed for Airbus cockpit displays

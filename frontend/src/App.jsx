@@ -315,7 +315,7 @@ export default function App() {
         </div>
       )}
 
-      <footer className="databar">DATA · adsb.lol · refresh {REFRESH_MS / 1000}s</footer>
+      <footer className="databar">DATA · adsb.fi · refresh {REFRESH_MS / 1000}s</footer>
     </div>
   )
 }

@@ -14,13 +14,14 @@ from fastapi.middleware.cors import CORSMiddleware
 #logi trafiaja do wyjscia uvicorna (widoczne tez w panelu hostingu)
 logger = logging.getLogger("uvicorn.error")
 
-#pozycje na zywo - otwarte api adsb.lol (okrag: srodek PL, promien 250 mil morskich)
-#sektor = okrag 250 mil morskich (limit adsb.lol) wokol srodka podanego przez frontend
-STATES_URL = "https://api.adsb.lol/v2/lat/{lat}/lon/{lon}/dist/250"
+#pozycje na zywo - otwarte api adsb.fi (adsb.lol zaczelo blokowac ip chmur, jak wczesniej OpenSky)
+#sektor = okrag 250 mil morskich wokol srodka podanego przez frontend
+STATES_URL = "https://opendata.adsb.fi/api/v2/lat/{lat}/lon/{lon}/dist/250"
 #sektor domowy - srodek Polski (uzywa go tez tablica lotniska)
 HOME_LAT = 52.1
 HOME_LON = 19.4
 #pelna sciezka lotu - endpoint tar1090 na infrastrukturze adsb.lol
+#(w chmurze pada przez blokade ip - frontend ma wtedy fallback na slad zbierany na zywo)
 TRACE_URL = "https://globe.adsb.lol/data/traces/{suffix}/trace_full_{icao24}.json"
 #spolecznosciowa baza tras i samolotow (bez klucza)
 ADSBDB_URL = "https://api.adsbdb.com/v0"
@@ -104,7 +105,8 @@ async def _fetch_flights(lat: float, lon: float) -> list:
         response.raise_for_status()
         payload = response.json()
 
-    aircraft = payload.get("ac") or []
+    #adsb.fi zwraca klucz "aircraft", inne instancje readsb "ac" - przyjmujemy oba
+    aircraft = payload.get("aircraft") or payload.get("ac") or []
     #odsiewam wpisy bez pozycji
     flights = [
         _parse_aircraft(a)
@@ -150,9 +152,9 @@ async def get_flights(
 async def debug_connectivity():
     #TYMCZASOWA diagnostyka polaczen wychodzacych - do usuniecia po naprawie
     targets = [
-        ("adsb_lol_api", STATES_URL.format(lat=52.1, lon=19.4)),
+        ("adsb_fi_api", STATES_URL.format(lat=52.1, lon=19.4)),
+        ("adsb_lol_api", "https://api.adsb.lol/v2/lat/52.1/lon/19.4/dist/50"),
         ("adsb_lol_trace", TRACE_URL.format(suffix="c4", icao24="a8f5c4")),
-        ("adsbdb", f"{ADSBDB_URL}/callsign/LOT1"),
         ("google", "https://www.google.com"),
     ]
     results = {}
