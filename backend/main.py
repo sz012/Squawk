@@ -148,26 +148,6 @@ async def get_flights(
     return {"cached": False, "count": len(flights), "flights": flights}
 
 
-@app.get("/debug")
-async def debug_connectivity():
-    #TYMCZASOWA diagnostyka polaczen wychodzacych - do usuniecia po naprawie
-    targets = [
-        ("adsb_fi_api", STATES_URL.format(lat=52.1, lon=19.4)),
-        ("adsb_lol_api", "https://api.adsb.lol/v2/lat/52.1/lon/19.4/dist/50"),
-        ("adsb_lol_trace", TRACE_URL.format(suffix="c4", icao24="a8f5c4")),
-        ("google", "https://www.google.com"),
-    ]
-    results = {}
-    for name, url in targets:
-        try:
-            async with _http_client() as client:
-                r = await client.get(url)
-            results[name] = f"ok {r.status_code}"
-        except Exception as exc:
-            results[name] = f"BLAD {exc!r}"
-    return results
-
-
 def _current_leg(points: list) -> list:
     #trace_full to cala dzisiejsza historia samolotu (wiele rejsow) - wycinam niepotrzebny odcinek
     cut = 0
