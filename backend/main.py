@@ -69,6 +69,8 @@ def _http_client() -> httpx.AsyncClient:
         timeout=httpx.Timeout(15, connect=10),
         transport=transport,
         follow_redirects=True,
+        #uczciwie sie przedstawiamy - golivy user-agent bywa odsiewany przez cloudflare na ip chmur
+        headers={"User-Agent": "Squawk-radar/1.0 (+https://github.com/sz012/Squawk)"},
     )
 
 
@@ -142,6 +144,26 @@ async def get_flights(
     if stale:
         return {"cached": True, "stale": True, "count": len(flights), "flights": flights}
     return {"cached": False, "count": len(flights), "flights": flights}
+
+
+@app.get("/debug")
+async def debug_connectivity():
+    #TYMCZASOWA diagnostyka polaczen wychodzacych - do usuniecia po naprawie
+    targets = [
+        ("adsb_lol_api", STATES_URL.format(lat=52.1, lon=19.4)),
+        ("adsb_lol_trace", TRACE_URL.format(suffix="c4", icao24="a8f5c4")),
+        ("adsbdb", f"{ADSBDB_URL}/callsign/LOT1"),
+        ("google", "https://www.google.com"),
+    ]
+    results = {}
+    for name, url in targets:
+        try:
+            async with _http_client() as client:
+                r = await client.get(url)
+            results[name] = f"ok {r.status_code}"
+        except Exception as exc:
+            results[name] = f"BLAD {exc!r}"
+    return results
 
 
 def _current_leg(points: list) -> list:
